@@ -1,5 +1,6 @@
 package com.ravionics.employeemanagementsystem.auth;
 
+import com.ravionics.employeemanagementsystem.book.BookRequestService;
 import com.ravionics.employeemanagementsystem.config.JwtHelper;
 import com.ravionics.employeemanagementsystem.entities.Role;
 import com.ravionics.employeemanagementsystem.entities.User;
@@ -31,6 +32,8 @@ public class AuthenticationService {
 
     @Autowired
     private JavaMailSender mailSender;
+    @Autowired
+    private BookRequestService bookRequestService;
 
 
     public User register(RegisterRequest request) {
@@ -58,22 +61,39 @@ public class AuthenticationService {
 //        //System.out.println(jwtResponse);
 //        return new ResponseEntity<>(jwtResponse, HttpStatus.OK);
 //    }
-public ResponseEntity<JwtResponse> authenticate(JwtRequest request) {
+public ResponseEntity<?> authenticate(JwtRequest request) {
+    // Check if the user exists by email
+    var userOptional = userRepository.findByEmail(request.getEmail());
+
+    if (userOptional.isEmpty()) {
+        // If the email is not found, return a "User not found" message
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body("User not found with email: " + request.getEmail());
+    }
+
     try {
+        // If email exists, authenticate the password
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(), request.getPassword()
                 )
         );
-        var user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
+        // Get the user after successful authentication
+        var user = userOptional.get();
+
+        // Generate the JWT token
         var jwtToken = jwtHelper.generateToken(user);
-        JwtResponse jwtResponse = new JwtResponse(jwtToken, Map.of("name", user.getFirstName(), "role", user.getRole().toString()));
+        JwtResponse jwtResponse = new JwtResponse(jwtToken, mapToUserResponse(user));
 
+        // Return the response
+        bookRequestService.getAllBookRequestsAndUpdateFines();
         return new ResponseEntity<>(jwtResponse, HttpStatus.OK);
+
     } catch (BadCredentialsException ex) {
-        return new ResponseEntity<>(HttpStatus.UNAUTHORIZED); // 401 status
+        // If authentication fails (wrong password), return an appropriate error message
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body("Wrong password for the given username.");
     }
 }
 
@@ -90,9 +110,10 @@ public ResponseEntity<JwtResponse> authenticate(JwtRequest request) {
         userResponse.setFirstName(user.getFirstName());
         userResponse.setLastName(user.getLastName());
         userResponse.setId(user.getId());
+        userResponse.setUsername(user.getEmail());
         userResponse.setRole(user.getRole());
+        userResponse.setOnboarded(user.getOnboarded());
         return userResponse;
-
     }
 
     //Forgot Password Service

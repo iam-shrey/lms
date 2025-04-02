@@ -213,7 +213,7 @@ public class OfferLetterService {
         String registrationEmailHtml = populateRegistrationTemplate(templateData);
 
         // Send the email (no attachment in this case)
-        emailService.sendHtmlRegistrationEmail(employee.getEmail(), "Welcome to Ravionics! Your Login Details", registrationEmailHtml);
+        emailService.sendHtmlRegistrationEmail(employee.getEmail(), "Welcome to Library! Your Login Details", registrationEmailHtml);
 
         return registrationEmailHtml;
     }

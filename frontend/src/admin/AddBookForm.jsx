@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import apiClient from "../api/apiClient";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 const AddBookForm = () => {
   const [book, setBook] = useState({
@@ -10,6 +12,8 @@ const AddBookForm = () => {
     quantity: null,
     publishDate: "",
   });
+
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setBook({ ...book, [e.target.name]: e.target.value });
@@ -27,13 +31,15 @@ const AddBookForm = () => {
         quantity: null,
         publishDate: "",
       });
+      toast.success("Book Submitted Successfully!")
+      navigate(-1);
     } catch (error) {
       console.error("Error adding book:", error);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border border-gray-300 rounded bg-white shadow-md w-1/2">
+    <form onSubmit={handleSubmit} className="p-4 border border-gray-300 rounded bg-white shadow-md w-1/2 justify-self-center mt-3">
       <h2 className="text-xl font-bold mb-4">Add Book</h2>
       <div className="mb-4">
         <input

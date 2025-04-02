@@ -1,6 +1,8 @@
 package com.ravionics.employeemanagementsystem.book;
 
 import com.ravionics.employeemanagementsystem.repositories.BookRepository;
+import com.ravionics.employeemanagementsystem.repositories.BookRequestRepository;
+import com.ravionics.employeemanagementsystem.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +14,12 @@ public class BookService {
 
     @Autowired
     private BookRepository bookRepository;
+
+    @Autowired
+    private BookRequestRepository bookRequestRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     // Add a new book
     public Book addBook(Book book) {
@@ -36,7 +44,6 @@ public class BookService {
             book.setPublisher(updatedBook.getPublisher());
             book.setIsbn(updatedBook.getIsbn());
             book.setQuantity(updatedBook.getQuantity());
-            book.setAvailable(updatedBook.isAvailable());
             book.setPublishDate(updatedBook.getPublishDate());
             return bookRepository.save(book);
         }).orElseThrow(() -> new RuntimeException("Book not found with ID: " + id));
@@ -48,6 +55,6 @@ public class BookService {
     }
 
     public List<Book> getBooksByUser(String userId) {
-        return bookRepository.findByUserId(userId);
+        return userRepository.findById(userId).get().getBooks();
     }
 }

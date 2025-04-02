@@ -1,6 +1,7 @@
 package com.ravionics.employeemanagementsystem.auth;
 
 import com.ravionics.employeemanagementsystem.entities.User;
+import com.ravionics.employeemanagementsystem.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,8 @@ public class AuthController {
 
     @Autowired
     private AuthenticationService authenticationService;
+    @Autowired
+    private UserRepository userRepository;
 
     public AuthController(AuthenticationManager manager) {
         this.manager = manager;
@@ -44,7 +47,7 @@ public class AuthController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<JwtResponse> login(@RequestBody JwtRequest request){
+    public ResponseEntity<?> login(@RequestBody JwtRequest request){
         return authenticationService.authenticate(request);
     }
 
@@ -60,6 +63,9 @@ public class AuthController {
             String email = request.get("email");
             if (email == null || email.isEmpty()) {
                 return ResponseEntity.badRequest().body("Error: Email cannot be null or empty");
+            }
+            if(userRepository.findByEmail(email).isEmpty()){
+                return ResponseEntity.badRequest().body("Error: User not found with this email");
             }
             authenticationService.sendOtp(email);
             return ResponseEntity.ok("OTP sent successfully!");
@@ -79,7 +85,6 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
-
     }
 
 

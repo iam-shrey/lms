@@ -15,5 +15,5 @@ import java.util.Map;
 @Builder
 public class JwtResponse {
     private String jwtToken;
-    private Map<String,String> user;
+    private UserResponse user;
 }

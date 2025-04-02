@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.security.Principal;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -134,6 +135,12 @@ public class UserController {
         private String accNumber;
     }
 
+    @Data
+    @NoArgsConstructor
+    public static class passwordDTO {
+        private String password;
+    }
+
     @PatchMapping("/update-profile")
     public ResponseEntity<String> updateUserProfile(Principal principal,
             @Valid @RequestBody TemporaryUserProfileDTO profileDTO) {
@@ -156,6 +163,16 @@ public class UserController {
         user.setGraduationYear(profileDTO.getGraduationYear());
         userService.saveUser(user);
         return ResponseEntity.ok("User profile updated successfully");
+    }
+
+    @PatchMapping("/update-password")
+    public ResponseEntity<String> updateUserPassword(Principal principal,
+                                                    @Valid @RequestBody passwordDTO DTO) {
+        User user = userRepository.findByEmail(principal.getName()).get();
+        user.setPassword(passwordEncoder.encode(DTO.getPassword()));
+        user.setOnboarded(true);
+        userService.saveUser(user);
+        return ResponseEntity.ok("Password updated successfully");
     }
 
 
@@ -189,6 +206,11 @@ public class UserController {
         user.setProfilePicture(null);
         userService.updateUser(user);
         return ResponseEntity.ok("Profile picture deleted successfully");
+    }
+
+    @GetMapping("/{userEmail}/metrics")
+    public Map<String, Integer> getUserMetrics(@PathVariable String userEmail) {
+        return userService.getMetrics(userEmail);
     }
 
 //    @GetMapping("loggedInUser")

@@ -3,6 +3,7 @@ import apiClient from "../api/apiClient";
 import { Button } from "flowbite-react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useAuth } from "../security/AuthContext";
 
 function EmployeeList() {
   const [employees, setEmployees] = useState([]);
@@ -15,24 +16,63 @@ function EmployeeList() {
   const [isConfirmDeleteModalOpen, setConfirmDeleteModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+  });
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleFormSubmit = () => {
+    apiClient
+      .put(`/admin/${selectedEmployee.id}`, formData)
+      .then((response) => {
+        console.log("Updated Employee:", response.data);
+        setIsEditModalOpen(false);
+  
+        // Show success toast
+        toast.success("Employee updated successfully!");
+  
+        // Update the employees state
+        setEmployees((prevEmployees) =>
+          prevEmployees.map((emp) =>
+            emp.id === response.data.id ? response.data : emp
+          )
+        );
+      })
+      .catch((error) => {
+        console.error("Error updating employee:", error);
+  
+        // Show error toast
+        toast.error("Failed to update employee. Please try again.");
+      });
+  };
+
   const [emailProcess, setEmailProcess] = useState(false);
-
-  const loggedInUser = localStorage.getItem("loggedInUserData");
-
-  let role = null
-
-  if (loggedInUser) {
-    const userObject = JSON.parse(loggedInUser);
-    role = userObject.userRole;
-  } else {
-    console.log("No user found");
-  }
+  const role = useAuth().role;
 
   // Fetch Employees
   useEffect(() => {
     fetchEmployees();
     fetchTemplateNames(); // Fetch templates when the component mounts
   }, []);
+
+  const handleEdit = (employee) => {
+    setSelectedEmployee(employee);
+    setFormData({
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      email: employee.email,
+      phoneNumber: employee.phoneNumber,
+    });
+    setIsEditModalOpen(true);
+  };
 
   const fetchEmployees = () => {
     apiClient
@@ -136,35 +176,39 @@ function EmployeeList() {
   };
 
   return (
-    <div className="w-11/12 mx-auto mt-8 flex-1">
-      <h2 className="text-2xl font-bold mb-4">Employee List</h2>
+    <div className="bg-white p-6 rounded-lg shadow-sm w-11/12 mx-auto mt-8">
+      <h2 className="text-3xl font-bold mb-4">Users List</h2>
       <div className="max-h-[25rem] overflow-auto border">
         <table className="w-full bg-white border">
           <thead>
             <tr className="w-full bg-gray-200">
               {role == "ADMIN" && <th className="py-2 px-4 border text-center">ID</th>}
-              {role == "ADMIN" && <th className="py-2 px-4 border text-center">Role</th>}
+              {/* {role == "ADMIN" && <th className="py-2 px-4 border text-center">Role</th>} */}
               <th className="py-2 px-4 border text-center">Name</th>
               <th className="py-2 px-4 border text-center">Email</th>
-              <th className="py-2 px-4 border text-center">Department</th>
-              {role == "ADMIN" && <th className="py-2 px-4 border text-center">Status</th>}
-              {role == "ADMIN" && <th className="py-2 px-4 border text-center">Offer Status</th>}
+              <th className="py-2 px-4 border text-center">Phone Number</th>
               {role == "ADMIN" && <th className="py-2 px-4 border text-center">Actions</th>}
             </tr>
           </thead>
           <tbody>
-            {employees.map((employee) => (
+            {employees
+            .filter((employee)=>employee.role=="USER")
+            .map((employee) => (
               <tr key={employee.id} className="hover:bg-gray-100">
                 {role == "ADMIN" && <td className="py-2 px-4 border text-center">{employee.id}</td>}
-                {role == "ADMIN" && <td className="py-2 px-4 border text-center">{employee.role}</td>}
+                {/* {role == "ADMIN" && <td className="py-2 px-4 border text-center">{employee.role}</td>} */}
                 <td className="py-2 px-4 border text-center">
                   {employee.firstName + " " + employee.lastName}
                 </td>
                 <td className="py-2 px-4 border text-center">{employee.email}</td>
-                <td className="py-2 px-4 border text-center">{employee.department}</td>
-                {role == "ADMIN" && <td className="py-2 px-4 border text-center">{employee.onboarded ? "Onboarded" : "Pending"}</td>}
-                {role == "ADMIN" && <td className="py-2 px-4 border text-center">{employee.offerLetterPdf ? "Sent" : "Pending"}</td>}
+                <td className="py-2 px-4 border text-center">{employee.phoneNumber}</td>
                 {role == "ADMIN" && <td className="py-2 px-4 border text-center">
+                  <button
+                      onClick={() => handleEdit(employee)}
+                      className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2"
+                    >
+                      Edit
+                    </button>
                   <button
                     onClick={() => {
                       setSelectedEmployee(employee);
@@ -307,6 +351,70 @@ function EmployeeList() {
                 Generate Offer Letter
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h2 className="text-xl font-semibold mb-4">Edit Employee</h2>
+            <form onSubmit={(e) => e.preventDefault()}>
+              <div className="mb-4">
+                <label className="block text-gray-700">First Name</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleFormChange}
+                  className="w-full border rounded p-2"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700">Last Name</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleFormChange}
+                  className="w-full border rounded p-2"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleFormChange}
+                  className="w-full border rounded p-2"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700">Phone Number</label>
+                <input
+                  type="text"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleFormChange}
+                  className="w-full border rounded p-2"
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded mr-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleFormSubmit}
+                  className="bg-blue-500 text-white px-4 py-2 rounded"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

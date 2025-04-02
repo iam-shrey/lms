@@ -6,6 +6,7 @@ import com.ravionics.employeemanagementsystem.entities.User;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 @Entity
 @Table(name = "book_requests")
@@ -30,11 +31,30 @@ public class BookRequest {
     @Column(nullable = false)
     private RequestStatus status;
 
+    private int fineAmount;
+
     @Temporal(TemporalType.TIMESTAMP)
     @Column(nullable = false)
     private Date requestedAt;
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date processedAt;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date returnedAt;
+
+    public void calculateFine() {
+
+            long diffInMillis = new Date().getTime() - processedAt.getTime();
+            long diffInDays = TimeUnit.MILLISECONDS.toDays(diffInMillis);
+
+
+            if (diffInDays > 15) {
+                fineAmount = (int) (10 * (diffInDays - 15));
+            } else {
+                fineAmount = 0;
+            }
+
+    }
 }
 

@@ -30,8 +30,7 @@ public class BookRequestController {
         return bookRequestService.processBookRequest(id);
     }
 
-    // Cancel a book request (admin or user)
-    @DeleteMapping("/cancel/{id}")
+    @PutMapping("/cancel/{id}")
     public void cancelBookRequest(@PathVariable Long id) {
         bookRequestService.cancelBookRequest(id);
     }

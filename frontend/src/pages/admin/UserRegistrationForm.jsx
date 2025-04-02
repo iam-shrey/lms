@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import apiClient from '../../api/apiClient';
 import { toast } from 'react-toastify';
 
 const UserRegistrationForm = () => {
-    // State for form inputs
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
-    const [department, setDepartment] = useState('');
-    const [collegeName, setCollegeName] = useState('');
-    const [address, setAddress] = useState('');
-    const [designation, setDesignation] = useState(''); // Added designation
-    const [joinDate, setJoinDate] = useState(''); // Added joinDate
+    const [phoneNumber, setphoneNumber] = useState('');
+    const [isAdmin, setIsAdmin] = useState(false);
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submissionMessage, setSubmissionMessage] = useState('');
@@ -26,11 +21,6 @@ const UserRegistrationForm = () => {
         if (!lastName) newErrors.lastName = 'Last name is required';
         if (!email) newErrors.email = 'Email is required';
         else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Invalid email format';
-        if (!department) newErrors.department = 'Department is required';
-        if (!collegeName) newErrors.collegeName = 'College name is required';
-        if (!address) newErrors.address = 'Address is required';
-        if (!designation) newErrors.designation = 'Designation is required'; // Validation for designation
-        if (!joinDate) newErrors.joinDate = 'Join date is required'; // Validation for joinDate
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
@@ -42,26 +32,19 @@ const UserRegistrationForm = () => {
                 firstName,
                 lastName,
                 email,
-                department,
-                collegeName,
-                address,
-                designation, // Include designation
-                joinDate, // Include joinDate
+                phoneNumber,
+                role: isAdmin ? 'ADMIN' : 'USER',
             };
 
             try {
                 const response = await apiClient.post('/admin/register', user);
-                setSubmissionMessage(response.data); // Assuming backend sends success message
-                toast.success(response.data)
-                // Clear the form fields
+                setSubmissionMessage(response.data);
+                toast.success(response.data);
                 setFirstName('');
                 setLastName('');
                 setEmail('');
-                setDepartment('');
-                setCollegeName('');
-                setAddress('');
-                setDesignation('');
-                setJoinDate('');
+                setphoneNumber('');
+                setIsAdmin(false);
             } catch (error) {
                 setSubmissionMessage('Error: Could not register the user. Please try again.');
             } finally {
@@ -71,7 +54,7 @@ const UserRegistrationForm = () => {
     };
 
     return (
-        <div className="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-lg mt-12">
+        <div className="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-lg">
             <h1 className="text-2xl font-bold text-center mb-6">Register User</h1>
             <form onSubmit={handleSubmit}>
                 {/* First Name */}
@@ -113,70 +96,61 @@ const UserRegistrationForm = () => {
                     {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                 </div>
 
-                {/* Department */}
+                {/* Phone Number */}
                 <div className="mb-4">
-                    <label htmlFor="department" className="block text-sm font-medium text-gray-700">Department</label>
+                    <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">Phone</label>
                     <input
                         type="text"
-                        id="department"
-                        value={department}
-                        onChange={(e) => setDepartment(e.target.value)}
+                        id="phoneNumber"
+                        value={phoneNumber}
+                        onChange={(e) => setphoneNumber(e.target.value)}
                         className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                     />
-                    {errors.department && <p className="text-red-500 text-xs mt-1">{errors.department}</p>}
+                    {errors.phoneNumber && <p className="text-red-500 text-xs mt-1">{errors.phoneNumber}</p>}
                 </div>
 
-                {/* College Name */}
-                <div className="mb-4">
-                    <label htmlFor="collegeName" className="block text-sm font-medium text-gray-700">College Name</label>
-                    <input
-                        type="text"
-                        id="collegeName"
-                        value={collegeName}
-                        onChange={(e) => setCollegeName(e.target.value)}
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    {errors.collegeName && <p className="text-red-500 text-xs mt-1">{errors.collegeName}</p>}
+                {/* Role Toggle */}
+                <div className="mb-4 flex items-center">
+                    <label htmlFor="isAdmin" className="block text-sm font-medium text-gray-700 mr-4">
+                        Role:
+                    </label>
+                    <div className="flex items-center space-x-4">
+                        <span className={`text-sm font-medium ${!isAdmin ? "text-indigo-600" : "text-gray-500"}`}>
+                            User
+                        </span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                id="isAdmin"
+                                checked={isAdmin}
+                                onChange={(e) => setIsAdmin(e.target.checked)}
+                                className="sr-only peer"
+                            />
+                            <div className="relative w-12 h-6">
+                                <input
+                                    type="checkbox"
+                                    id="isAdmin"
+                                    checked={isAdmin}
+                                    onChange={(e) => setIsAdmin(e.target.checked)}
+                                    className="sr-only peer"
+                                />
+                                <div
+                                    className="w-full h-full bg-gray-300 rounded-full peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 transition-colors duration-200 
+                   peer-checked:bg-indigo-600"
+                                ></div>
+                                <div
+                                    className="absolute top-0.5 left-0.5 w-5 h-5 bg-white border border-gray-300 rounded-full shadow-sm 
+                   peer-checked:translate-x-6 peer-checked:border-white transition-transform duration-200"
+                                ></div>
+                            </div>
+
+                        </label>
+                        <span className={`text-sm font-medium ${isAdmin ? "text-indigo-600" : "text-gray-500"}`}>
+                            Admin
+                        </span>
+                    </div>
                 </div>
 
-                {/* Address */}
-                <div className="mb-4">
-                    <label htmlFor="address" className="block text-sm font-medium text-gray-700">Address</label>
-                    <textarea
-                        id="address"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        rows="3"
-                    ></textarea>
-                    {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
-                </div>
-
-                {/* Designation */}
-                <div className="mb-4">
-                    <label htmlFor="designation" className="block text-sm font-medium text-gray-700">Designation</label>
-                    <input
-                        type="text"
-                        id="designation"
-                        value={designation}
-                        onChange={(e) => setDesignation(e.target.value)}
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    {errors.designation && <p className="text-red-500 text-xs mt-1">{errors.designation}</p>}
-                </div>
-
-                {/* Join Date */}
-                <div className="mb-4">
-                    <label htmlFor="joinDate" className="block text-sm font-medium text-gray-700">Join Date</label>
-                    <input
-                        type="date"
-                        id="joinDate"
-                        value={joinDate}
-                        onChange={(e) => setJoinDate(e.target.value)}
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    {errors.joinDate && <p className="text-red-500 text-xs mt-1">{errors.joinDate}</p>}
-                </div>
 
                 {/* Submit Button */}
                 <button

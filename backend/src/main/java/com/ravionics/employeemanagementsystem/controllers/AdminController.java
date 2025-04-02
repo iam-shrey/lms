@@ -4,6 +4,7 @@ import com.ravionics.employeemanagementsystem.auth.AuthenticationService;
 import com.ravionics.employeemanagementsystem.entities.Role;
 import com.ravionics.employeemanagementsystem.entities.User;
 import com.ravionics.employeemanagementsystem.repositories.UserRepository;
+import com.ravionics.employeemanagementsystem.services.AdminService;
 import com.ravionics.employeemanagementsystem.services.OfferLetterService;
 import com.ravionics.employeemanagementsystem.services.UserService;
 import jakarta.mail.MessagingException;
@@ -27,6 +28,9 @@ public class AdminController {
 //    public OfferTemplateRepository templateRepository;
 //
 //    private final OfferTemplateService templateService;
+
+    @Autowired
+    private AdminService adminService;
 
     @Autowired
     public UserService userService;
@@ -114,6 +118,13 @@ public class AdminController {
 //            return ResponseEntity.badRequest().body(e.getMessage());
 //        }
 //    }
+@PutMapping("/{id}")
+public ResponseEntity<User> updateEmployee(
+        @PathVariable("id") String id,
+        @RequestBody User updatedEmployee) {
+    User updated = adminService.updateEmployee(id, updatedEmployee);
+    return ResponseEntity.ok(updated);
+}
 
     @DeleteMapping("/employees/{id}")
     public void deleteUser(@PathVariable String id) {
@@ -122,15 +133,23 @@ public class AdminController {
 
     @PostMapping("/register")
     public ResponseEntity<String> addUser(@RequestBody User user) throws MessagingException {
+        if(userRepository.findByEmail(user.getEmail()).isPresent())
+            return ResponseEntity.badRequest().body("Error: Email is already in use");
+        if(user.getRole() == Role.ADMIN)
+            user.setOnboarded(true);
         String password = UUID.randomUUID().toString();
-        user.setRole(Role.valueOf("USER"));
         user.setPassword(passwordEncoder.encode(password));
         Random random = new Random();
         Integer randomNumber = 100000 + random.nextInt(900000);
-        user.setId("RAV"+randomNumber.toString());
+        user.setId("AC"+randomNumber.toString());
         offerLetterService.sendRegistrationEmail(user, password);
         userRepository.save(user);
         return ResponseEntity.ok("User registered and Email sent successfully");
+    }
+
+    @GetMapping("/metrics")
+    public Map<String, Integer> getAdminMetrics() {
+        return adminService.getMetrics();
     }
 
 //    public String sendOfferLetter(User user) throws MessagingException {

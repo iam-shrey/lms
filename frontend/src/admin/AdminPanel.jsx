@@ -1,163 +1,175 @@
-import React, { useState, useEffect } from "react";
-import BookList from "./BookList";
-import AddBookForm from "./AddBookForm";
-import UpdateBookForm from "./UpdateBookForm";
-import apiClient from "../api/apiClient";
-import BookRequestsList from "./BookRequestsList";  // New component to list book requests
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import apiClient from '../api/apiClient';
 
-function AdminPanel() {
-  const [editingBook, setEditingBook] = useState(null);
-  const [books, setBooks] = useState([]);
-  const [bookRequests, setBookRequests] = useState([]);
+const AdminPanel = () => {
+  const [metrics, setMetrics] = useState({
+    totalUsers: 0,
+    totalBooks: 0,
+    pendingRequests: 0,
+  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [showBookRequests, setShowBookRequests] = useState(false); // State to toggle book requests
-
+  const [bookRequests, setBookRequests] = useState([]);
   const navigate = useNavigate();
 
-  // Fetch books and book requests from the API
   useEffect(() => {
-
-    const fetchBookRequests = async () => {
-      try {
-        const response = await apiClient.get("/book-requests/all"); // Adjust endpoint to fetch all book requests
-        setBookRequests(response.data);
-      } catch (error) {
-        setError("Failed to fetch book requests");
-      }
-    };
-
-    fetchBooks();
+    fetchMetrics();
     fetchBookRequests();
   }, []);
 
-  const fetchBooks = async () => {
-    setLoading(true);
+  const fetchMetrics = async () => {
     try {
-      const response = await apiClient.get("/books");
-      setBooks(response.data);
+      const response = await apiClient.get('/admin/metrics');
+      setMetrics({
+        totalUsers: response.data.totalUsers,
+        totalBooks: response.data.totalBooks,
+        pendingRequests: response.data.pendingRequests,
+      });
     } catch (error) {
-      setError("Failed to fetch books");
-    } finally {
-      setLoading(false);
+      console.error('Error fetching metrics:', error);
     }
   };
 
-  const handleEdit = (book) => {
-    setEditingBook(book);
-  };
-
-  const handleDelete = async (id) => {
-    const confirmation = window.confirm("Are you sure you want to delete this book?");
-    if (!confirmation) return;
-
-    setLoading(true);
+  const fetchBookRequests = async () => {
     try {
-      await apiClient.delete(`/books/${id}`);
-      setBooks(books.filter((book) => book.id !== id)); // Optimistically update the UI
-      alert("Book deleted successfully!");
+      const response = await apiClient.get("/book-requests/all"); // Adjust endpoint to fetch all book requests
+      setBookRequests(response.data);
     } catch (error) {
-      setError("Error deleting book.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const closeModal = () => setEditingBook(null);
-
-  const handleUpdate = async (updatedBook) => {
-    setLoading(true);
-    try {
-      await apiClient.put(`/books/${updatedBook.id}`, updatedBook);
-      fetchBooks();
-      setEditingBook(null); // Close modal
-      alert("Book updated successfully!");
-    } catch (error) {
-      setError("Error updating book.");
-    } finally {
-      setLoading(false);
+      setError("Failed to fetch book requests");
     }
   };
 
   const handleRequestStatusChange = async (requestId, status) => {
     setLoading(true);
     try {
-      await apiClient.put(`/book-requests/${requestId}/status`, { status });
-      setBookRequests(
-        bookRequests.map((request) =>
-          request.id === requestId ? { ...request, status } : request
-        )
-      );
-      alert(`Request ${status} successfully!`);
+      let response;
+      if (status === "PROCESSED") {
+        response = await apiClient.put(`/book-requests/process/${requestId}`);
+      } else if (status === "CANCELLED") {
+        response = await apiClient.put(`/book-requests/cancel/${requestId}`);
+      }
+
+      // After the request is processed, update the local state
+      if (response.status === 200 || response.status === 204) {
+        setBookRequests(
+          bookRequests.map((request) =>
+            request.id === requestId ? { ...request, status } : request
+          )
+        );
+        fetchMetrics();
+        alert(`Request ${status === "PROCESSED" ? "approved" : "rejected"} successfully!`);
+      }
     } catch (error) {
-      setError("Error updating request status.");
+      console.error("Error processing request:", error);
+      alert("Error processing the request.");
     } finally {
       setLoading(false);
     }
   };
 
+
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <h1 className="text-3xl font-bold text-center mb-8">Library Admin Panel</h1>
+    <div className="min-h-[calc(100vh-68px)] flex flex-col items-center py-12">
 
-      {error && <p className="text-red-500">{error}</p>}
 
-      <div className="flex justify-center items-center mb-8">
-        <AddBookForm onAddBook={(newBook) => setBooks([...books, newBook])} />
-      </div>
-
-      {/* Toggle button for book requests */}
-      <div className="flex justify-center mb-8">
-        <button
-          className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-          onClick={() => setShowBookRequests(!showBookRequests)}
-        >
-          {showBookRequests ? "Hide Book Requests" : "Show Book Requests"}
-        </button>
-        <button
-          className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-          onClick={() => navigate("/employees")}
-        >
-          Show Users List
-        </button>
-
-      </div>
-
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : (
-        <>
-          <BookList onEdit={handleEdit} onDelete={handleDelete} books={books} />
-          {showBookRequests && (
-            <BookRequestsList
-              bookRequests={bookRequests}
-              onHandleRequestStatusChange={handleRequestStatusChange} // Function to handle status change
-            />
-          )}
-        </>
-      )}
-
-      {editingBook && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg">
-            <h2 className="text-2xl font-bold mb-4">Edit Book</h2>
-            <UpdateBookForm
-              bookToUpdate={editingBook}
-              onUpdate={handleUpdate}
-              closeModal={closeModal} // Update function passed to UpdateBookForm
-            />
-            <button
-              onClick={closeModal}
-              className="mt-4 w-full bg-red-500 text-white py-2 rounded hover:bg-red-600"
-            >
-              Close
-            </button>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-28 mb-10">
+        <div className="bg-white shadow-lg rounded-2xl p-6 flex flex-col items-center">
+          <h2 className="text-xl font-semibold text-gray-600">Total Users</h2>
+          <p className="text-3xl font-bold text-blue-500 mt-4">{metrics.totalUsers}</p>
         </div>
-      )}
+        <div className="bg-white shadow-lg rounded-2xl p-6 flex flex-col items-center">
+          <h2 className="text-xl font-semibold text-gray-600">Total Books</h2>
+          <p className="text-3xl font-bold text-green-500 mt-4">{metrics.totalBooks}</p>
+        </div>
+        <div className="bg-white shadow-lg rounded-2xl p-6 flex flex-col items-center">
+          <h2 className="text-xl font-semibold text-gray-600">Pending Requests</h2>
+          <p className="text-3xl font-bold text-red-500 mt-4">{metrics.pendingRequests}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-32">
+        <button
+          onClick={() => navigate('/employees')}
+          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 px-6 rounded-2xl shadow-md cursor-pointer transform hover:scale-105 transition-all"
+        >
+          Manage Users
+        </button>
+        <button
+          onClick={() => navigate('/books')}
+          className="bg-green-500 hover:bg-green-600 text-white font-semibold py-4 px-6 rounded-2xl shadow-md cursor-pointer transform hover:scale-105 transition-all"
+        >
+          Manage Books
+        </button>
+        <button
+          onClick={() => navigate('/admin/book-requests')}
+          className="bg-red-500 hover:bg-red-600 text-white font-semibold py-4 px-6 rounded-2xl shadow-md cursor-pointer transform hover:scale-105 transition-all"
+        >
+          Manage Requests
+        </button>
+      </div>
+
+
+      <div className="bg-white p-6 rounded-lg shadow-sm w-3/4 mx-auto mt-10">
+        <h3 className="text-3xl font-bold mb-4">Pending Book Requests</h3>
+        {loading && <p>Processing request...</p>}
+
+        {/* Filter and Check for Pending Requests */}
+        {bookRequests.filter((request) => request.status === "PENDING").length === 0 ? (
+          <p className="text-gray-500 text-center italic py-4">No pending requests</p>
+        ) : (
+          <div className="max-h-[10rem] overflow-auto border">
+            <table className="min-w-full bg-white rounded-lg border border-gray-300 shadow-sm">
+              <thead>
+                <tr className="text-center border">
+                  <th className="px-4 py-2 border">ID</th>
+                  <th className="px-4 py-2 border">Book Title</th>
+                  <th className="px-4 py-2 border">User Name</th>
+                  <th className="px-4 py-2 border">User ID</th>
+                  <th className="px-4 py-2 border">Status</th>
+                  <th className="px-4 py-2 border">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookRequests
+                  .filter((request) => request.status === "PENDING")
+                  .map((request) => (
+                    <tr key={request.id} className="border-t text-center">
+                      <td className="px-4 py-2 border">{request.id}</td>
+                      <td className="px-4 py-2 border">{request.book.title}</td>
+                      <td className="px-4 py-2 border">
+                        {request.user.firstName + " " + request.user.lastName}
+                      </td>
+                      <td className="px-4 py-2 border">{request.user.id}</td>
+                      <td className="px-4 py-2 border">{request.status}</td>
+                      <td className="px-4 py-2 border">
+                        {request.status === "PENDING" && (
+                          <div className="flex space-x-4">
+                            <button
+                              onClick={() => handleRequestStatusChange(request.id, "PROCESSED")}
+                              className="bg-green-500 text-white py-1 px-3 rounded hover:bg-green-600"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRequestStatusChange(request.id, "CANCELLED")}
+                              className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+
     </div>
   );
-}
+};
 
 export default AdminPanel;

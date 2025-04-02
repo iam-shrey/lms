@@ -1,10 +1,8 @@
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../security/AuthContext';
 import { HiInformationCircle } from "react-icons/hi";
 import { Alert, Button } from 'flowbite-react';
-import { toast } from 'react-toastify';
-import { executeGetLoggedInUser } from '../api/AuthenticationApiService';
 
 export default function LoginComponent() {
 
@@ -20,18 +18,8 @@ export default function LoginComponent() {
 
     const navigate = useNavigate();
 
-    const [userDetails, setUserDetails] = useState({
-        role: '',
-        firstName: '',
-        lastName: '',
-        id: '',
-        newUser: true,
-        designation: '',
-        department: ''
-    });
-
     function handleUsernameChange(event) {
-        setUsername(event.target.value) // event.target gives the element in which event is happening, here <input> element....
+        setUsername(event.target.value)
     }
 
     function handlePasswordChange(event) {
@@ -45,66 +33,32 @@ export default function LoginComponent() {
     };
 
 
-
     async function handleSubmit() {
         setLoading(true);
-
-        const loginSuccess = await authContext.login(username, password);
-        if (loginSuccess) {
-            toast.success("Login Successful!");
-            console.log("Login successful:", authContext.role);
-
-            try {
-                const response = await executeGetLoggedInUser(authContext.token);
-                setUserDetails({
-                    role: response.data.role,
-                    firstName: response.data.firstName,
-                    lastName: response.data.lastName,
-                    id: response.data.id,
-                    newUser: !response.data.onboarded,
-                    designation: response.data.designation,
-                    department: response.data.department
-                });
-            } catch (error) {
-                console.error("Error fetching logged-in user:", error);
-                setShowErrorMessage(true);
-            }
-        } else {
-            console.log("Login failed");
-            setShowErrorMessage(true);
+        try {
+            await authContext.login(username, password);
+        } catch (error) {
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     }
 
     useEffect(() => {
-        if (userDetails.role) {
-            if (userDetails.role === "ADMIN") {
+        if (authContext.role) {
+            if (authContext.role === "ADMIN") {
                 navigate(`/admin`);
             } else {
+                if (authContext.newUser)
+                    navigate(`/new`)
+                else
                     navigate(`/user`);
             }
         }
-    }, [userDetails.role]);
-
-    // const { id: userId, role: userRole, ...rest } = userDetails;
-    // const loggedInUserData = { userId, ...rest };
-
-    const loggedInUserData = {
-        userId: userDetails.id,
-        firstName: userDetails.firstName,
-        lastName: userDetails.lastName,
-        userRole: userDetails.role,
-        newUser: userDetails.newUser,
-        designation: userDetails.designation,
-        department: userDetails.department
-    }
-
-    localStorage.setItem("loggedInUserData", JSON.stringify(loggedInUserData))
+    }, [authContext]);
 
 
     return (
-        <div className="Login max-w-md mx-auto mt-10 p-5 border border-gray-300 rounded-lg shadow-lg bg-white">
+        <div className="Login max-w-md mx-auto mt-20 p-5 border border-gray-300 rounded-lg shadow-lg bg-white">
             <h1 className="text-3xl font-bold text-center mb-4">Time to Login!</h1>
             {showErrorMessage && (
                 <Alert color="failure" icon={HiInformationCircle}>
@@ -153,4 +107,3 @@ export default function LoginComponent() {
 
     )
 }
-

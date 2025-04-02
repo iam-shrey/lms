@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import apiClient from "../api/apiClient";
 
-const UpdateBookForm = ({ bookToUpdate, onUpdate, closeModal }) => {
+const UpdateBookForm = ({ bookToUpdate, closeModal, fetchBook }) => {
   const [book, setBook] = useState(bookToUpdate);
 
   const handleChange = (e) => {
@@ -13,8 +13,8 @@ const UpdateBookForm = ({ bookToUpdate, onUpdate, closeModal }) => {
     try {
       // Update the book with the modified details
       await apiClient.put(`/books/${book.id}`, book);
-      onUpdate(); // Refresh the book list after update
       closeModal(); // Close the modal after the update
+      fetchBook();
     } catch (error) {
       console.error("Error updating book:", error);
     }

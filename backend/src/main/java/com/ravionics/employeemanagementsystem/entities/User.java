@@ -1,6 +1,7 @@
 package com.ravionics.employeemanagementsystem.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.ravionics.employeemanagementsystem.book.Book;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,6 +49,11 @@ public class User implements UserDetails {
     private String phoneNumber;
     private String accNumber;
 
+    @ManyToMany
+    private List<Book> books = new ArrayList<>();
+
+    private Boolean onboarded = false;
+
     @Enumerated(EnumType.STRING)
     private Role role;
 
@@ -87,5 +93,4 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
-
 }

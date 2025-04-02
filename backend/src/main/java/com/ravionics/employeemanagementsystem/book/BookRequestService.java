@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class BookRequestService {
@@ -48,6 +49,20 @@ public class BookRequestService {
     }
 
     // Get all book requests (admin only)
+//    public void calculateFine(BookRequest bookRequest) {
+//
+//        long diffInMillis = new Date().getTime() - bookRequest.getProcessedAt().getTime();
+//        long diffInDays = TimeUnit.MILLISECONDS.toDays(diffInMillis);
+//
+//
+//        if (diffInDays > 15) {
+//            bookRequest.setFineAmount((int) (10 * (diffInDays - 15)));
+//        } else {
+//            bookRequest.setFineAmount(0);
+//        }
+//
+//    }
+
     public List<BookRequest> getAllBookRequests() {
         return bookRequestRepository.findAll();
     }
@@ -60,6 +75,12 @@ public class BookRequestService {
             BookRequest bookRequest = bookRequestOpt.get();
             bookRequest.setStatus(RequestStatus.PROCESSED);
             bookRequest.setProcessedAt(new Date());
+            Book book = bookRequest.getBook();
+            book.setQuantity(book.getQuantity() - 1);
+            bookRequest.setBook(book);
+            User u = bookRequest.getUser();
+            u.getBooks().add(book);
+            userRepository.save(u);
             return bookRequestRepository.save(bookRequest);
         }
         throw new RuntimeException("BookRequest not found");
@@ -72,6 +93,7 @@ public class BookRequestService {
         if (bookRequestOpt.isPresent()) {
             BookRequest bookRequest = bookRequestOpt.get();
             bookRequest.setStatus(RequestStatus.CANCELLED);
+            bookRequest.setProcessedAt(new Date());
             bookRequestRepository.save(bookRequest);
         } else {
             throw new RuntimeException("BookRequest not found");
@@ -80,5 +102,19 @@ public class BookRequestService {
 
     public List<BookRequest> getBookRequestsForUser(String userId) {
         return bookRequestRepository.findByUserId(userId);
+    }
+
+    public List<BookRequest> getAllBookRequestsAndUpdateFines() {
+        List<BookRequest> bookRequests = bookRequestRepository.findByStatusIn(
+                List.of(RequestStatus.PROCESSED, RequestStatus.RETURNED)
+        );
+
+        for (BookRequest bookRequest : bookRequests) {
+            bookRequest.calculateFine(); // Update fine for each request
+        }
+
+        bookRequestRepository.saveAll(bookRequests);
+
+        return bookRequests; // Return the updated list
     }
 }

@@ -24,11 +24,6 @@ public class Book {
 
     private Integer quantity;
 
-    private boolean available;
-
     private LocalDate publishDate;
-
-    @ManyToOne
-    private User user;
 
 }

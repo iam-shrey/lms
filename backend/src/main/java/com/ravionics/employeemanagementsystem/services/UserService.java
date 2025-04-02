@@ -1,8 +1,8 @@
 package com.ravionics.employeemanagementsystem.services;
 
+import com.ravionics.employeemanagementsystem.book.Book;
 import com.ravionics.employeemanagementsystem.entities.User;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -21,4 +21,6 @@ public interface UserService {
     User getUserById(String id);
 
     String currentLoggedInUser(Authentication loggedInUser);
+
+    void returnBook(Book book, String userId);
 }
